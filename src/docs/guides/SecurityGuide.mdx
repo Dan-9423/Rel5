@@ -1,0 +1,71 @@
+# Guia de Segurança
+
+Este guia documenta as práticas de segurança do sistema.
+
+## Autenticação
+
+### JWT (JSON Web Tokens)
+
+- Tokens são assinados e expiram em 1 hora
+- Refresh tokens permitem renovação automática
+- Armazenamento seguro em HttpOnly cookies
+
+### Proteção de Rotas
+
+```typescript
+// Exemplo de rota protegida
+function ProtectedRoute() {
+  const { isAuthenticated } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  return <ProtectedContent />;
+}
+```
+
+## Autorização
+
+### RBAC (Role-Based Access Control)
+
+Níveis de acesso:
+- Admin: Acesso total
+- Manager: Gerenciamento limitado
+- User: Operações básicas
+
+### Políticas de Acesso
+
+```typescript
+// Exemplo de política
+function checkPermission(user, resource, action) {
+  const roles = {
+    admin: ['create', 'read', 'update', 'delete'],
+    manager: ['create', 'read', 'update'],
+    user: ['read']
+  };
+  
+  return roles[user.role].includes(action);
+}
+```
+
+## Proteção de Dados
+
+### Criptografia
+
+- Dados sensíveis são criptografados em repouso
+- Comunicação via HTTPS
+- Senhas com hash usando bcrypt
+
+### Sanitização
+
+- Validação de entrada
+- Escape de HTML
+- Prevenção de SQL Injection
+
+## Boas Práticas
+
+1. Princípio do menor privilégio
+2. Validação em camadas
+3. Logs de segurança
+4. Atualizações regulares

@@ -1,0 +1,78 @@
+# Guia de Componentes
+
+Este guia explica como usar e estender os componentes do sistema.
+
+## Anatomia de um Componente
+
+Nossos componentes seguem uma estrutura consistente:
+
+```tsx
+interface ComponentProps {
+  // Props bem definidas
+}
+
+export function Component({ prop1, prop2 }: ComponentProps) {
+  // Lógica do componente
+  return (
+    // JSX com classes Tailwind
+  );
+}
+```
+
+## Estilização
+
+Utilizamos Tailwind CSS para estilização. Algumas convenções importantes:
+
+- Use as variáveis CSS definidas no tema
+- Mantenha consistência com o design system
+- Aproveite as classes utilitárias
+
+## Composição
+
+Preferimos composição sobre herança. Exemplo:
+
+```tsx
+function ParentComponent() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Título</CardTitle>
+      </CardHeader>
+      <CardContent>
+        Conteúdo
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## Hooks Personalizados
+
+Extraia lógica complexa para hooks:
+
+```tsx
+function useCustomHook() {
+  const [state, setState] = useState();
+  
+  useEffect(() => {
+    // Efeitos colaterais
+  }, []);
+
+  return { state };
+}
+```
+
+## Acessibilidade
+
+Sempre considere:
+- Uso correto de ARIA labels
+- Suporte a navegação por teclado
+- Contraste adequado de cores
+- Feedback visual claro
+
+## Performance
+
+Otimize seus componentes:
+- Use memo quando necessário
+- Evite re-renderizações desnecessárias
+- Carregue recursos sob demanda

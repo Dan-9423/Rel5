@@ -1,0 +1,114 @@
+# Guia da API
+
+Este guia documenta as APIs disponíveis no sistema.
+
+## Autenticação
+
+Todas as requisições autenticadas devem incluir o token JWT no header:
+
+```typescript
+const headers = {
+  'Authorization': `Bearer ${token}`
+};
+```
+
+## Endpoints
+
+### Clientes
+
+```typescript
+// Listar clientes
+GET /api/customers
+
+// Criar cliente
+POST /api/customers
+{
+  razaoSocial: string;
+  nomeFantasia: string;
+  cnpj: string;
+  email: string;
+}
+
+// Atualizar cliente
+PUT /api/customers/:id
+{
+  // campos a atualizar
+}
+
+// Excluir cliente
+DELETE /api/customers/:id
+```
+
+### E-mails
+
+```typescript
+// Enviar e-mail
+POST /api/emails/send
+{
+  to: string;
+  subject: string;
+  content: string;
+  attachments?: File[];
+}
+
+// Listar histórico
+GET /api/emails/history
+
+// Obter templates
+GET /api/emails/templates
+```
+
+### Tarefas
+
+```typescript
+// Criar lista
+POST /api/tasks/lists
+{
+  name: string;
+}
+
+// Adicionar tarefa
+POST /api/tasks
+{
+  listId: string;
+  content: string;
+}
+
+// Atualizar status
+PATCH /api/tasks/:id
+{
+  completed: boolean;
+}
+```
+
+## Tratamento de Erros
+
+A API retorna erros no seguinte formato:
+
+```typescript
+{
+  error: {
+    code: string;
+    message: string;
+    details?: any;
+  }
+}
+```
+
+## Rate Limiting
+
+- 100 requisições por minuto por IP
+- 1000 requisições por hora por usuário
+
+## Versionamento
+
+A API é versionada via URL:
+- v1: /api/v1/
+- v2: /api/v2/
+
+## Webhooks
+
+Disponíveis para eventos como:
+- Novo cliente
+- E-mail enviado
+- Tarefa concluída
