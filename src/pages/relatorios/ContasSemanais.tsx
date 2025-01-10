@@ -27,26 +27,6 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Draggable from 'react-draggable';
-import jsPDF from 'jspdf';
-
-interface CompanyData {
-  name: string;
-  ownerName: string;
-  cnpj: string;
-}
-
-interface FinancialData {
-  totalPayable: number;
-  totalReceivable: number;
-  balance: number;
-}
-
-interface PaymentEntry {
-  date: string;
-  description: string;
-  value: number;
-  status: 'pending' | 'paid' | 'overdue';
-}
 
 interface DraggablePosition {
   x: number;
@@ -59,37 +39,36 @@ interface DraggableElement {
   position: DraggablePosition;
 }
 
+interface PaymentEntry {
+  date: string;
+  description: string;
+  value: number;
+  status: 'pending' | 'paid' | 'overdue';
+}
+
 export default function ContasSemanais() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [backgroundSvg, setBackgroundSvg] = useState<string | null>(null);
-  const [showPositionConfig, setShowPositionConfig] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [payableEntries, setPayableEntries] = useState<PaymentEntry[]>([]);
+  const [receivableEntries, setReceivableEntries] = useState<PaymentEntry[]>([]);
+
+  // Add refs for draggable elements
+  const nodeRefs = {
+    'company-data': useRef(null),
+    'financial-data': useRef(null),
+    'payable-table': useRef(null),
+    'receivable-table': useRef(null)
+  };
 
   // Draggable elements state
   const [draggableElements, setDraggableElements] = useState<DraggableElement[]>([
     { id: 'company-data', type: 'company', position: { x: 0, y: 0 } },
-    { id: 'financial-data', type: 'financial', position: { x: 0, y: 0 } },
-    { id: 'payable-table', type: 'payable', position: { x: 0, y: 0 } },
-    { id: 'receivable-table', type: 'receivable', position: { x: 0, y: 0 } }
+    { id: 'financial-data', type: 'financial', position: { x: 0, y: 200 } },
+    { id: 'payable-table', type: 'payable', position: { x: 0, y: 400 } },
+    { id: 'receivable-table', type: 'receivable', position: { x: 0, y: 600 } }
   ]);
-
-  // Company and Financial Data state
-  const [companyData, setCompanyData] = useState<CompanyData>({
-    name: '',
-    ownerName: '',
-    cnpj: ''
-  });
-
-  const [financialData, setFinancialData] = useState<FinancialData>({
-    totalPayable: 0,
-    totalReceivable: 0,
-    balance: 0
-  });
-
-  // Payment entries state
-  const [payableEntries, setPayableEntries] = useState<PaymentEntry[]>([]);
-  const [receivableEntries, setReceivableEntries] = useState<PaymentEntry[]>([]);
 
   const handleDragStop = (elementId: string, e: any, data: { x: number, y: number }) => {
     setDraggableElements(prev => prev.map(element => 
@@ -97,13 +76,6 @@ export default function ContasSemanais() {
         ? { ...element, position: { x: data.x, y: data.y } }
         : element
     ));
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,7 +102,13 @@ export default function ContasSemanais() {
     }
   };
 
-  // Renderiza os elementos arrastáveis sobre o SVG
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
   const renderDraggableElements = () => (
     <div className="relative w-full h-full">
       {draggableElements.map((element) => (
@@ -139,72 +117,72 @@ export default function ContasSemanais() {
           position={element.position}
           onStop={(e, data) => handleDragStop(element.id, e, data)}
           bounds="parent"
+          nodeRef={nodeRefs[element.id as keyof typeof nodeRefs]}
         >
-          <div className="absolute cursor-move bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+          <div 
+            ref={nodeRefs[element.id as keyof typeof nodeRefs]}
+            className="absolute cursor-move bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
+          >
             {element.type === 'company' && (
               <div className="space-y-2">
                 <h3 className="font-medium">Dados da Empresa</h3>
-                <p>{companyData.name}</p>
-                <p>{companyData.ownerName}</p>
-                <p>{companyData.cnpj}</p>
+                <p>Empresa ABC Ltda</p>
+                <p>CNPJ: 00.000.000/0000-00</p>
+                <p>contato@empresa.com</p>
               </div>
             )}
             {element.type === 'financial' && (
               <div className="space-y-2">
                 <h3 className="font-medium">Totais Financeiros</h3>
-                <p>A Pagar: {formatCurrency(financialData.totalPayable)}</p>
-                <p>A Receber: {formatCurrency(financialData.totalReceivable)}</p>
-                <p>Saldo: {formatCurrency(financialData.balance)}</p>
+                <p>A Pagar: {formatCurrency(15000)}</p>
+                <p>A Receber: {formatCurrency(25000)}</p>
+                <p>Saldo: {formatCurrency(10000)}</p>
               </div>
             )}
             {element.type === 'payable' && (
               <div className="w-96">
                 <h3 className="font-medium mb-2">Contas a Pagar</h3>
-                <div className="max-h-40 overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Valor</TableHead>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Valor</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payableEntries.map((entry, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{entry.date}</TableCell>
+                        <TableCell>{entry.description}</TableCell>
+                        <TableCell>{formatCurrency(entry.value)}</TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {payableEntries.map((entry, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{entry.date}</TableCell>
-                          <TableCell>{entry.description}</TableCell>
-                          <TableCell>{formatCurrency(entry.value)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
             {element.type === 'receivable' && (
               <div className="w-96">
                 <h3 className="font-medium mb-2">Contas a Receber</h3>
-                <div className="max-h-40 overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Valor</TableHead>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Valor</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {receivableEntries.map((entry, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{entry.date}</TableCell>
+                        <TableCell>{entry.description}</TableCell>
+                        <TableCell>{formatCurrency(entry.value)}</TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {receivableEntries.map((entry, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{entry.date}</TableCell>
-                          <TableCell>{entry.description}</TableCell>
-                          <TableCell>{formatCurrency(entry.value)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>
@@ -212,9 +190,6 @@ export default function ContasSemanais() {
       ))}
     </div>
   );
-
-  // Resto do componente permanece o mesmo, apenas adicionando o renderDraggableElements
-  // onde o SVG é exibido
 
   return (
     <div className="space-y-6">
@@ -229,253 +204,121 @@ export default function ContasSemanais() {
         <CardContent className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>Nome da Empresa</Label>
-            <Input
-              value={companyData.name}
-              onChange={(e) => setCompanyData({ ...companyData, name: e.target.value })}
-              placeholder="Razão Social"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Nome do Sócio</Label>
-            <Input
-              value={companyData.ownerName}
-              onChange={(e) => setCompanyData({ ...companyData, ownerName: e.target.value })}
-              placeholder="Nome completo"
-            />
+            <Input placeholder="Razão Social" />
           </div>
           <div className="space-y-2">
             <Label>CNPJ</Label>
-            <Input
-              value={companyData.cnpj}
-              onChange={(e) => setCompanyData({ ...companyData, cnpj: e.target.value })}
-              placeholder="00.000.000/0000-00"
-            />
+            <Input placeholder="00.000.000/0000-00" />
+          </div>
+          <div className="space-y-2">
+            <Label>E-mail</Label>
+            <Input type="email" placeholder="contato@empresa.com" />
           </div>
         </CardContent>
       </Card>
 
-      {/* Financial Totals Section */}
+      {/* Financial Data Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Totais Financeiros</CardTitle>
+          <CardTitle>Dados Financeiros</CardTitle>
           <CardDescription>
-            Resumo dos valores a pagar, receber e saldo
+            Resumo dos valores a pagar e receber
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label>Total a Pagar</Label>
-            <Input
-              type="number"
-              value={financialData.totalPayable}
-              onChange={(e) => setFinancialData({ 
-                ...financialData, 
-                totalPayable: Number(e.target.value),
-                balance: Number(e.target.value) - financialData.totalReceivable
-              })}
-              className="text-red-500 font-medium"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Total a Receber</Label>
-            <Input
-              type="number"
-              value={financialData.totalReceivable}
-              onChange={(e) => setFinancialData({ 
-                ...financialData, 
-                totalReceivable: Number(e.target.value),
-                balance: financialData.totalPayable - Number(e.target.value)
-              })}
-              className="text-green-500 font-medium"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Saldo Total</Label>
-            <Input
-              value={formatCurrency(financialData.balance)}
-              readOnly
-              className={`font-medium ${financialData.balance >= 0 ? 'text-green-500' : 'text-red-500'}`}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Accounts Tables Section */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Payable Accounts */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Contas a Pagar</CardTitle>
-              <Button onClick={() => {
-                setPayableEntries([...payableEntries, {
-                  date: '',
-                  description: '',
-                  value: 0,
-                  status: 'pending'
-                }]);
-              }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
+        <CardContent className="grid grid-cols-2 gap-6">
+          {/* Payable Accounts */}
+          <div>
+            <h3 className="text-lg font-medium mb-4">Contas a Pagar</h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Input type="date" className="w-40" />
+                <Input placeholder="Descrição" className="flex-1" />
+                <Input type="number" placeholder="Valor" className="w-32" />
+                <Button onClick={() => setPayableEntries(prev => [
+                  ...prev,
+                  { date: '2024-01-15', description: 'Nova conta', value: 0, status: 'pending' }
+                ])}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Valor</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {payableEntries.map((entry, index) => (
                     <TableRow key={index}>
+                      <TableCell>{entry.date}</TableCell>
+                      <TableCell>{entry.description}</TableCell>
+                      <TableCell>{formatCurrency(entry.value)}</TableCell>
                       <TableCell>
-                        <Input
-                          type="date"
-                          value={entry.date}
-                          onChange={(e) => {
-                            const newEntries = [...payableEntries];
-                            newEntries[index].date = e.target.value;
-                            setPayableEntries(newEntries);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          value={entry.description}
-                          onChange={(e) => {
-                            const newEntries = [...payableEntries];
-                            newEntries[index].description = e.target.value;
-                            setPayableEntries(newEntries);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          value={entry.value}
-                          onChange={(e) => {
-                            const newEntries = [...payableEntries];
-                            newEntries[index].value = Number(e.target.value);
-                            setPayableEntries(newEntries);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <select
-                          className="w-full rounded-md border border-input bg-background px-3 py-1"
-                          value={entry.status}
-                          onChange={(e) => {
-                            const newEntries = [...payableEntries];
-                            newEntries[index].status = e.target.value as PaymentEntry['status'];
-                            setPayableEntries(newEntries);
-                          }}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setPayableEntries(prev => prev.filter((_, i) => i !== index))}
                         >
-                          <option value="pending">Pendente</option>
-                          <option value="paid">Pago</option>
-                          <option value="overdue">Atrasado</option>
-                        </select>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Receivable Accounts */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Contas a Receber</CardTitle>
-              <Button onClick={() => {
-                setReceivableEntries([...receivableEntries, {
-                  date: '',
-                  description: '',
-                  value: 0,
-                  status: 'pending'
-                }]);
-              }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
+          {/* Receivable Accounts */}
+          <div>
+            <h3 className="text-lg font-medium mb-4">Contas a Receber</h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Input type="date" className="w-40" />
+                <Input placeholder="Descrição" className="flex-1" />
+                <Input type="number" placeholder="Valor" className="w-32" />
+                <Button onClick={() => setReceivableEntries(prev => [
+                  ...prev,
+                  { date: '2024-01-15', description: 'Nova conta', value: 0, status: 'pending' }
+                ])}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Valor</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {receivableEntries.map((entry, index) => (
                     <TableRow key={index}>
+                      <TableCell>{entry.date}</TableCell>
+                      <TableCell>{entry.description}</TableCell>
+                      <TableCell>{formatCurrency(entry.value)}</TableCell>
                       <TableCell>
-                        <Input
-                          type="date"
-                          value={entry.date}
-                          onChange={(e) => {
-                            const newEntries = [...receivableEntries];
-                            newEntries[index].date = e.target.value;
-                            setReceivableEntries(newEntries);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          value={entry.description}
-                          onChange={(e) => {
-                            const newEntries = [...receivableEntries];
-                            newEntries[index].description = e.target.value;
-                            setReceivableEntries(newEntries);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          value={entry.value}
-                          onChange={(e) => {
-                            const newEntries = [...receivableEntries];
-                            newEntries[index].value = Number(e.target.value);
-                            setReceivableEntries(newEntries);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <select
-                          className="w-full rounded-md border border-input bg-background px-3 py-1"
-                          value={entry.status}
-                          onChange={(e) => {
-                            const newEntries = [...receivableEntries];
-                            newEntries[index].status = e.target.value as PaymentEntry['status'];
-                            setReceivableEntries(newEntries);
-                          }}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setReceivableEntries(prev => prev.filter((_, i) => i !== index))}
                         >
-                          <option value="pending">Pendente</option>
-                          <option value="paid">Recebido</option>
-                          <option value="overdue">Atrasado</option>
-                        </select>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Background Upload Section */}
       <Card>
